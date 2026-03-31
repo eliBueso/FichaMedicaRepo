@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fichas Médicas - Campamento</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f3f5f7;
+      color: #222;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .topbar {
+      max-width: 1100px;
+      margin: 0 auto 24px auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border: 1px solid #d8dee6;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .topbar-left {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .topbar button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      background: #2c6e91;
+      color: white;
+      font-size: 14px;
+    }
+
+    .topbar button:hover {
+      background: #245a77;
+    }
+
+    .help {
+      font-size: 14px;
+      color: #555;
+    }
+
+    #cards {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #d9dee3;
+      border-radius: 14px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      page-break-after: always;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #2c6e91;
+      padding-bottom: 12px;
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 24px;
+      text-transform: uppercase;
+    }
+
+    .section {
+      margin-top: 20px;
+    }
+
+    .section-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: #1f4f68;
+      border-left: 5px solid #2c6e91;
+      padding-left: 10px;
+      margin-bottom: 14px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .field.full {
+      flex: 0 0 100%;
+    }
+
+    .label {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      min-height: 34px;
+      border: 1px solid #aab4be;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      white-space: pre-wrap;
+    }
+
+    .checks {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      padding-top: 6px;
+      font-size: 15px;
+    }
+
+    .consent-box {
+      border: 1px solid #aab4be;
+      border-radius: 8px;
+      padding: 14px;
+      background: #fafbfd;
+    }
+
+    .signature-area {
+      margin-top: 32px;
+    }
+
+    .signature-line {
+      border-bottom: 1px solid #333;
+      height: 42px;
+      margin-bottom: 8px;
+    }
+
+    .signature-label {
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .empty-state {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px dashed #b8c2cc;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      color: #666;
+    }
+
+    .debug {
+      max-width: 1100px;
+      margin: 0 auto 18px auto;
+      background: #fff8e1;
+      border: 1px solid #e7cf7a;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #5f4b00;
+      display: none;
+      white-space: pre-wrap;
+    }
+
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .topbar, .debug {
+        display: none !important;
+      }
+
+      .card {
+        box-shadow: none;
+        border: none;
+        margin: 0 0 16px 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Generador de Fichas Médicas</h1>
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <input type="file" id="csvFile" accept=".csv" />
+      <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
+    <div class="help">
+      Sube tu CSV exportado desde Excel.
+    </div>
+  </div>
+
+  <div id="debug" class="debug"></div>
+
+  <div id="cards">
+    <div class="empty-state">
+      Sube un archivo CSV para generar las fichas médicas automáticamente.
+    </div>
+  </div>
+
+  <script>
+    const csvInput = document.getElementById("csvFile");
+    const cardsContainer = document.getElementById("cards");
+    const debugBox = document.getElementById("debug");
+
+    csvInput.addEventListener("change", handleFile);
+
+    function showDebug(text) {
+      debugBox.style.display = "block";
+      debugBox.textContent = text;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function safe(value) {
+      const v = String(value ?? "").trim();
+      return v ? escapeHtml(v) : "";
+    }
+
+    function normalizeText(value) {
+      return String(value ?? "")
+        .replace(/^\uFEFF/, "")
+        .replace(/\r/g, "")
+        .trim();
+    }
+
+    function normalizeHeader(value) {
+      return normalizeText(value)
+        .replace(/\s+/g, " ")
+        .replace(/[¿?]/g, "")
+        .replace(/[“”"]/g, "")
+        .replace(/:/g, "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    function normalizeYesNo(value) {
+      const v = normalizeText(value).toUpperCase();
+      if (["SI", "SÍ", "YES", "TRUE"].includes(v)) return "SI";
+      if (["NO", "FALSE"].includes(v)) return "NO";
+      return v;
+    }
+
+    function markYesNo(value, target) {
+      const v = normalizeYesNo(value);
+      const yes = v === "SI";
+      const no = v === "NO";
+
+      if (target === "yes") return yes ? "☑ Sí" : "☐ Sí";
+      if (target === "no") return no ? "☑ No" : "☐ No";
+      return "";
+    }
+
+    function markConsent(value, target) {
+      const v = normalizeText(value).toUpperCase();
+
+      const yesValues = ["SI", "SÍ", "AUTORIZO", "AUTORIZADA", "AUTORIZADO"];
+      const noValues = ["NO", "NO APLICA"];
+
+      const yes = yesValues.includes(v);
+      const no = noValues.includes(v);
+
+      if (target === "yes") return yes ? "☑ Sí autorizo" : "☐ Sí autorizo";
+      if (target === "no") return no ? "☑ No autorizo" : "☐ No autorizo";
+      return target === "yes" ? "☐ Sí autorizo" : "☐ No autorizo";
+    }
+
+    function parseDelimited(text, delimiter = ";") {
+      const rows = [];
+      let row = [];
+      let current = "";
+      let insideQuotes = false;
+
+      text = text.replace(/^\uFEFF/, "");
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (insideQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === delimiter && !insideQuotes) {
+          row.push(current);
+          current = "";
+        } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+          if (char === "\r" && next === "\n") i++;
+          row.push(current);
+          current = "";
+
+          const hasSomeValue = row.some(cell => String(cell).trim() !== "");
+          if (hasSomeValue) rows.push(row);
+
+          row = [];
+        } else {
+          current += char;
+        }
+      }
+
+      row.push(current);
+      if (row.some(cell => String(cell).trim() !== "")) {
+        rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function findValue(row, headerMap, possibleNames) {
+      for (const name of possibleNames) {
+        const normalized = normalizeHeader(name);
+        if (headerMap.has(normalized)) {
+          const index = headerMap.get(normalized);
+          return normalizeText(row[index] || "");
+        }
+      }
+      return "";
+    }
+
+    function normalizeRow(row, headerMap) {
+      return {
+        nombres: findValue(row, headerMap, ["Nombres"]),
+        apellidos: findValue(row, headerMap, ["Apellidos"]),
+        identidad: findValue(row, headerMap, ["Identidad"]),
+        edadActual: findValue(row, headerMap, ["Edad Actual"]),
+        nivel: findValue(row, headerMap, ["Nivel"]),
+        padeceEnfermedad: normalizeYesNo(findValue(row, headerMap, [
+          "Padece alguna enfermedad?",
+          "Padece alguna enfermedad"
+        ])),
+        descripcionEnfermedad: findValue(row, headerMap, [
+          "Descripción de enfermedad",
+          "Descripcion de enfermedad"
+        ]),
+        tieneAlergias: normalizeYesNo(findValue(row, headerMap, [
+          "¿Tiene alergias?",
+          "Tiene alergias"
+        ])),
+        alergiasQue: findValue(row, headerMap, [
+          "¿A qué?",
+          "A qué",
+          "A que"
+        ]),
+        tomaMedicamento: normalizeYesNo(findValue(row, headerMap, [
+          "¿Toma algún medicamento?",
+          "Toma algún medicamento",
+          "Toma algun medicamento"
+        ])),
+        medicamentoCadaCuanto: findValue(row, headerMap, [
+          "¿Cuál y cada cuánto?",
+          "Cual y cada cuanto",
+          "Cuál y cada cuánto"
+        ]),
+        tipoSangre: findValue(row, headerMap, ["Tipo de Sangre"]),
+        contactoEmergencia: findValue(row, headerMap, [
+          "Contacto de emergencia:",
+          "Contacto de emergencia"
+        ]),
+        autorizacion: findValue(row, headerMap, [
+          "Autorizo a los encargados del campamento a brindar primeros auxilios en caso de emergencia.",
+          "Autorizo a los encargados del campamento a brindar primeros auxilios en caso de emergencia"
+        ]),
+        nombreEncargado: findValue(row, headerMap, [
+          "Nombre de padre o encargado"
+        ])
+      };
+    }
+
+    function createCard(person) {
+      return `
+        <div class="card">
+          <div class="header">
+            <h2>Registro Médico – Campamento</h2>
+          </div>
+
+          <div class="section">
+            <div class="section-title">1. Datos personales</div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Nombres</div>
+                <div class="value">${safe(person.nombres)}</div>
+              </div>
+              <div class="field">
+                <div class="label">Apellidos</div>
+                <div class="value">${safe(person.apellidos)}</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Identidad</div>
+                <div class="value">${safe(person.identidad)}</div>
+              </div>
+              <div class="field">
+                <div class="label">Edad actual</div>
+                <div class="value">${safe(person.edadActual)}</div>
+              </div>
+              <div class="field">
+                <div class="label">Nivel</div>
+                <div class="value">${safe(person.nivel)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">2. Información médica</div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">¿Padece alguna enfermedad?</div>
+                <div class="checks">
+                  <span>${markYesNo(person.padeceEnfermedad, "yes")}</span>
+                  <span>${markYesNo(person.padeceEnfermedad, "no")}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">Descripción de enfermedad</div>
+                <div class="value">${safe(person.descripcionEnfermedad)}</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">¿Tiene alergias?</div>
+                <div class="checks">
+                  <span>${markYesNo(person.tieneAlergias, "yes")}</span>
+                  <span>${markYesNo(person.tieneAlergias, "no")}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">¿A qué?</div>
+                <div class="value">${safe(person.alergiasQue)}</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">¿Toma algún medicamento?</div>
+                <div class="checks">
+                  <span>${markYesNo(person.tomaMedicamento, "yes")}</span>
+                  <span>${markYesNo(person.tomaMedicamento, "no")}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field full">
+                <div class="label">¿Cuál y cada cuánto?</div>
+                <div class="value">${safe(person.medicamentoCadaCuanto)}</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="field">
+                <div class="label">Tipo de sangre</div>
+                <div class="value">${safe(person.tipoSangre)}</div>
+              </div>
+              <div class="field">
+                <div class="label">Contacto de emergencia</div>
+                <div class="value">${safe(person.contactoEmergencia)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">3. Autorización</div>
+
+            <div class="consent-box">
+              <div class="checks" style="margin-bottom: 12px;">
+                <span>${markConsent(person.autorizacion, "yes")}</span>
+                <span>${markConsent(person.autorizacion, "no")}</span>
+              </div>
+              <strong>
+                Autorizo a los encargados del campamento a brindar primeros auxilios en caso de emergencia.
+              </strong>
+            </div>
+
+            <div class="row" style="margin-top: 14px;">
+              <div class="field full">
+                <div class="label">Nombre de padre o encargado</div>
+                <div class="value">${safe(person.nombreEncargado)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="signature-area">
+            <div class="signature-line"></div>
+            <div class="signature-label">Firma del padre, madre o encargado</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        try {
+          const text = e.target.result;
+          const parsedRows = parseDelimited(text, ";");
+
+          if (!parsedRows.length || parsedRows.length < 2) {
+            cardsContainer.innerHTML = '<div class="empty-state">No se encontraron registros válidos en el CSV.</div>';
+            showDebug("No se pudieron leer filas válidas.");
+            return;
+          }
+
+          const rawHeaders = parsedRows[0].map(h => normalizeText(h));
+          const headerMap = new Map();
+
+          rawHeaders.forEach((header, index) => {
+            headerMap.set(normalizeHeader(header), index);
+          });
+
+          const people = parsedRows
+            .slice(1)
+            .map(row => normalizeRow(row, headerMap))
+            .filter(person => {
+              return (
+                person.nombres ||
+                person.apellidos ||
+                person.identidad
+              );
+            });
+
+          if (!people.length) {
+            cardsContainer.innerHTML = '<div class="empty-state">Se leyeron filas, pero no se pudo mapear la información a los campos.</div>';
+            showDebug(
+              "Encabezados detectados:\n\n" +
+              rawHeaders.join("\n")
+            );
+            return;
+          }
+
+          cardsContainer.innerHTML = people.map(createCard).join("");
+
+          showDebug(
+            `Archivo leído correctamente.\n` +
+            `Registros: ${people.length}\n\n` +
+            `Encabezados detectados:\n${rawHeaders.join("\n")}`
+          );
+        } catch (error) {
+          cardsContainer.innerHTML = '<div class="empty-state">Ocurrió un error al procesar el archivo.</div>';
+          showDebug("Error:\n" + error.message);
+        }
+      };
+
+      reader.readAsText(file, "utf-8");
+    }
+  </script>
+</body>
+</html>
